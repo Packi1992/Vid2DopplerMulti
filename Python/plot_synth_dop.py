@@ -13,6 +13,8 @@ def main(args):
 	model_path = args.model_path
 
 	lb = pickle.loads(open(model_path+"classifier_classes.lbl", "rb").read())
+	# Note: Using compile=False to avoid potential warnings/errors with custom objects if we only predict.
+	# However, since root_mean_squared_error is passed, we keep it as-is based on original trace.
 	autoencoder = load_model(model_path+"autoencoder_weights.hdf5", custom_objects={'root_mean_squared_error': root_mean_squared_error})
 	scale_vals = np.load(model_path+"scale_vals.npy")
 	fps = 24
@@ -28,7 +30,13 @@ def main(args):
 
 	cap = cv2.VideoCapture(vid_f)
 
-	out_vid = cv2.VideoWriter(in_folder+'/'+vid_file_name+'_output_signal.mp4',cv2.VideoWriter_fourcc(*'MP4V'), fps, (2425,300))
+	output_filepath = in_folder+'/'+vid_file_name+'_output_signal.avi'
+	fourcc_codec = cv2.VideoWriter_fourcc(*'DIVX')
+
+	out_vid = cv2.VideoWriter(output_filepath, fourcc_codec, fps, (2558,300))
+
+	print(f"INFO: Writing video output to: {output_filepath}")
+	print(f"INFO: Using codec: DIVX (FourCC: {'DIVX'})")
 
 	synth_doppler_dat_f = in_folder + "/output/" + vid_file_name + "/synth_doppler.npy"
 	synth_doppler_dat = np.load(synth_doppler_dat_f)
@@ -53,6 +61,9 @@ def main(args):
 
 	for idx in range(0, len(dop_spec_test)):
 		ret, frame = cap.read()
+		if not ret:
+			print("WARNING: Reached end of input video stream prematurely.")
+			break
 		original_synth = color_scale(synth_spec_test[idx],matplotlib.colors.Normalize(vmin=0, vmax=np.max(synth_spec_test)),"Initial Synthetic Doppler")
 		original_dop = color_scale(dop_spec_test[idx],matplotlib.colors.Normalize(vmin=0, vmax=np.max(dop_spec_test)),"Real World Doppler")
 		recon = color_scale(decoded[idx],matplotlib.colors.Normalize(vmin=0, vmax=np.max(decoded)),"Final Synthetic Doppler")
@@ -62,6 +73,7 @@ def main(args):
 
 	cap.release()
 	out_vid.release()
+	print("INFO: Video creation finished and resources released.")
 
 
 if __name__ == '__main__':
@@ -73,7 +85,5 @@ if __name__ == '__main__':
 	parser.add_argument('--model_path', type=str, help='Path to DL models')
 
 	parser.add_argument('--doppler_gt', help='Doppler Ground Truth is available for reference', action='store_true')
-
 	args = parser.parse_args()
-
 	main(args)

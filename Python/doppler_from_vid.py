@@ -9,12 +9,15 @@ import shutil
 def main(args):
 
 	folder_path = os.path.dirname(os.path.abspath(args.input_video))
+	print("run_VIBE")
 	os.system("python run_VIBE.py --input_video %s --output_folder %s" % (args.input_video, folder_path))
-
+	print("run_VIBE - complete")
 	out_path = folder_path + "/output/"
-
+	print("compute position")
 	os.system("python compute_position.py --input_video %s --output_folder %s" % (args.input_video, out_path))
+	print("interpolate_frames")
 	os.system("python interpolate_frames.py --input_video %s --output_folder %s" % (args.input_video, out_path))
+	print("compute velocity")
 	os.system("python compute_velocity.py --input_video %s --output_folder %s" % (args.input_video, out_path))
 	if args.visualize_mesh:
 		os.system("python compute_visualization.py --input_video %s --output_folder %s --wireframe" % (args.input_video, out_path))
